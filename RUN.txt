@@ -1,0 +1,83 @@
+============================================================
+  MEDIC-AI – Graph Analysis of DTI Images (Alzheimer)
+============================================================
+
+Yêu cầu hệ thống
+-----------------
+  - Python 3.10+
+  - Windows 10/11 (đã test)
+  - RAM: >= 8 GB
+  - Dung lượng ổ cứng: >= 5 GB trống
+
+------------------------------------------------------------
+BƯỚC 0: Kích hoạt môi trường ảo (.venv)
+------------------------------------------------------------
+
+  Windows PowerShell:
+    .\.venv\Scripts\Activate.ps1
+
+  Windows CMD:
+    .venv\Scripts\activate.bat
+
+  Sau khi kích hoạt, terminal sẽ hiển thị prefix (.venv).
+
+------------------------------------------------------------
+BƯỚC 1: Cài đặt dependencies (chỉ cần làm 1 lần)
+------------------------------------------------------------
+
+  pip install -r requirements.txt
+
+  Lưu ý: numpy phải < 2.0.0 (đã ghi sẵn trong requirements.txt)
+  để tránh lỗi binary incompatibility với dipy.
+
+------------------------------------------------------------
+BƯỚC 2: Tải dataset mẫu từ OpenNeuro
+------------------------------------------------------------
+
+  python scripts/download_dataset.py
+
+  → Tải dữ liệu sub-01 từ dataset ds002737 về thư mục:
+    dataset/sub-01/
+
+  Lưu ý: Dataset này là fMRI (dùng để test luồng tải dữ liệu).
+  Để phân tích Alzheimer thật, cần đăng ký tài khoản và tải
+  dữ liệu DTI từ OASIS-3 (oasis-brains.org) hoặc ADNI.
+
+------------------------------------------------------------
+BƯỚC 3: Tiền xử lý ảnh DTI – Task 2 (FAST MODE)
+------------------------------------------------------------
+
+  python scripts/task2_preprocess.py
+
+  → Script sẽ tự động:
+      1. Tải dữ liệu DTI mẫu (Stanford HARDI ~400MB) từ dipy
+      2. Crop vùng não trung tâm 40×40×40 (fast mode)
+      3. Khử nhiễu bằng Patch2Self (model=ridge, ~70–90 giây)
+      4. Loại bỏ Gibbs Ringing (~25 giây)
+      5. Đo SNR trước/sau xử lý
+      6. Lưu kết quả tại:
+           dataset/derivatives/dwi_preprocessed_fast.nii.gz
+
+  Để chạy toàn bộ ảnh não (không crop):
+    → Mở scripts/task2_preprocess.py
+    → Đổi dòng cuối: fast_mode=False
+
+  Để dùng dữ liệu DTI Alzheimer thật:
+    → Điền đường dẫn vào hàm preprocess_dwi():
+        preprocess_dwi(
+            data_path=r"E:\...\sub-XX_dwi.nii.gz",
+            bval_path=r"E:\...\sub-XX_dwi.bval",
+            fast_mode=False
+        )
+
+------------------------------------------------------------
+Trạng thái hiện tại (Task Checklist)
+------------------------------------------------------------
+
+  [x] Task 1 – Setup & Tải dữ liệu OpenNeuro (DONE)
+  [x] Task 2 – Tiền xử lý ảnh DTI (DONE – sample)
+  [ ] Task 3 – Tractography & Parcellation (TODO)
+  [ ] Task 4 – Trích xuất đặc trưng đồ thị (TODO)
+  [ ] Task 5 – Phân tích thống kê / Hồi quy (TODO)
+
+============================================================
