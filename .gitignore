@@ -1,0 +1,34 @@
+# ======================
+# MEDIC-AI .gitignore
+# ======================
+
+# Dataset và dữ liệu MRI (dung lượng lớn, không push lên git)
+dataset/
+!dataset/.gitkeep
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
