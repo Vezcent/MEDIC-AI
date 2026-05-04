@@ -1,17 +1,17 @@
 """
-visualize_dwi.py – Kiểm tra trực quan dữ liệu DTI đã xử lý
-Xuất: dataset/derivatives/qc_report.png (lưu ảnh, không cần GUI)
+visualize_dwi.py – Visual QC inspection of preprocessed DTI data
+Output: dataset/derivatives/qc_report.png (saved to file, no GUI required)
 """
 import os
 import numpy as np
 import nibabel as nib
 import matplotlib
-matplotlib.use("Agg")           # Không cần màn hình, lưu thẳng ra file
+matplotlib.use("Agg")           # No display needed, save directly to file
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-# ── Đường dẫn ────────────────────────────────────────────────────────────────
+# -- File paths ----------------------------------------------------------------
 DERIV_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                          "dataset", "derivatives")
 PROC_PATH = os.path.join(DERIV_DIR, "dwi_preprocessed_fast.nii.gz")
@@ -26,7 +26,7 @@ def snr(volume):
 
 
 def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
-    print(f"Đang tải: {proc_path}")
+    print(f"Loading: {proc_path}")
     img  = nib.load(proc_path)
     data = img.get_fdata().astype(np.float32)
     nx, ny, nz, nvol = data.shape
@@ -44,7 +44,7 @@ def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
     cmap = "inferno"
     label_kw = dict(color="#aaaaaa", fontsize=8)
 
-    # ── Hàng 1: 3 lát cắt của volume b0 (vol 0) ────────────────────────────
+    # -- Row 1: 3 orthogonal slices of b0 volume (vol 0) --------------------------
     vol0 = data[..., 0]
     vmax = np.percentile(vol0, 99)
 
@@ -59,15 +59,15 @@ def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
         ax.set_title(f"b0 – {title}", color="white", fontsize=9)
         ax.axis("off")
 
-    # ── Hàng 1 col 3-4: SNR theo từng volume ────────────────────────────────
-    print("Tính SNR cho tất cả volumes...")
+    # -- Row 1 col 3-4: SNR per volume --------------------------------------------
+    print("Computing SNR for all volumes...")
     snr_vals = [snr(data[..., i]) for i in range(nvol)]
 
     ax_snr = fig.add_subplot(gs[0, 3:5])
     ax_snr.plot(snr_vals, color="#00d4ff", linewidth=1.2)
     ax_snr.axhline(np.mean(snr_vals), color="#ff6b6b", linestyle="--",
                    linewidth=1, label=f"Mean={np.mean(snr_vals):.2f}")
-    ax_snr.set_title("SNR theo từng DWI volume", color="white", fontsize=9)
+    ax_snr.set_title("SNR per DWI volume", color="white", fontsize=9)
     ax_snr.set_xlabel("Volume index (b-value)", **label_kw)
     ax_snr.set_ylabel("SNR", **label_kw)
     ax_snr.legend(fontsize=8, facecolor="#1e2530", labelcolor="white")
@@ -76,7 +76,7 @@ def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
     for sp in ax_snr.spines.values():
         sp.set_color("#444444")
 
-    # ── Hàng 2: 5 volumes ngẫu nhiên khác nhau ──────────────────────────────
+    # -- Row 2: 5 evenly-spaced DWI volumes ----------------------------------------
     vol_idxs = np.linspace(0, nvol - 1, 5, dtype=int)
     for col, vi in enumerate(vol_idxs):
         ax = fig.add_subplot(gs[1, col])
@@ -86,12 +86,12 @@ def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
         ax.set_title(f"Vol {vi}  (z={cz})", color="white", fontsize=8)
         ax.axis("off")
 
-    # ── Hàng 3 col 0-1: Histogram phân phối cường độ ───────────────────────
+    # -- Row 3 col 0-1: Voxel intensity histogram ---------------------------------
     ax_hist = fig.add_subplot(gs[2, 0:2])
     flat = data[data > 0].ravel()
     ax_hist.hist(flat, bins=80, color="#00d4ff", alpha=0.75,
                  edgecolor="none", density=True)
-    ax_hist.set_title("Phân phối cường độ voxel (>0)", color="white", fontsize=9)
+    ax_hist.set_title("Voxel intensity distribution (>0)", color="white", fontsize=9)
     ax_hist.set_xlabel("Intensity", **label_kw)
     ax_hist.set_ylabel("Density", **label_kw)
     ax_hist.set_facecolor("#1e2530")
@@ -99,7 +99,7 @@ def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
     for sp in ax_hist.spines.values():
         sp.set_color("#444444")
 
-    # ── Hàng 3 col 2-4: Thống kê tóm tắt dạng text ─────────────────────────
+    # -- Row 3 col 2-4: Summary statistics text panel ------------------------------
     ax_txt = fig.add_subplot(gs[2, 2:5])
     ax_txt.axis("off")
     stats = [
@@ -107,7 +107,7 @@ def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
         ("Shape (x,y,z,vol)", str(data.shape)),
         ("Dtype",         str(data.dtype)),
         ("Min / Max",     f"{data.min():.2f}  /  {data.max():.2f}"),
-        ("Mean ± Std",    f"{data.mean():.2f} ± {data.std():.2f}"),
+        ("Mean +/- Std",  f"{data.mean():.2f} +/- {data.std():.2f}"),
         ("SNR mean",      f"{np.mean(snr_vals):.2f}"),
         ("SNR min / max", f"{min(snr_vals):.2f}  /  {max(snr_vals):.2f}"),
         ("Voxel < 0",     str((data < 0).sum())),
@@ -130,18 +130,18 @@ def make_qc_report(proc_path=PROC_PATH, out_path=OUT_PATH):
                     fontfamily="monospace")
         y0 -= 0.082
 
-    ax_txt.set_title("Thống kê QC tổng quan", color="white", fontsize=9, loc="left")
+    ax_txt.set_title("QC Summary Statistics", color="white", fontsize=9, loc="left")
     ax_txt.set_facecolor("#1e2530")
 
-    # ── Lưu ─────────────────────────────────────────────────────────────────
+    # -- Save ----------------------------------------------------------------------
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     fig.savefig(out_path, dpi=130, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close(fig)
-    print(f"\n✅ QC report đã lưu tại: {out_path}")
+    print(f"\n=== QC report saved to: {out_path} ===")
     return out_path
 
 
 if __name__ == "__main__":
     out = make_qc_report()
-    # Tự mở file ảnh sau khi lưu (Windows)
+    # Auto-open the image file after saving (Windows)
     os.startfile(out)

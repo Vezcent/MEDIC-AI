@@ -1,0 +1,217 @@
+============================================================
+  MEDIC-AI – Sample Run Report
+  Graph Analysis of DTI Images (Alzheimer)
+  Generated: 2026-05-04
+============================================================
+
+Project: MEDIC-AI
+Topic:   Graph analysis of DTI images
+Goal:    Build end-to-end pipeline from raw DTI → Brain Graph
+         → Graph Features → Statistical Regression (MMSE)
+
+Environment:
+  OS:       Windows 10/11
+  Python:   3.11 (venv)
+  Key libs: dipy 1.9.0, networkx 3.3, statsmodels 0.14.2
+
+============================================================
+  TASK 1: SETUP & DATA ACQUISITION
+============================================================
+
+Status: COMPLETE
+
+  - Downloaded sample dataset ds002737 from OpenNeuro
+    (1 subject, 3 sessions, ~3.38 GB)
+  - Dataset structure: BIDS-compliant
+    dataset/sub-01/ses-01/  (fmap, func)
+    dataset/sub-01/ses-02/  (fmap, func)
+    dataset/sub-01/ses-03/  (anat)
+
+  Note: ds002737 is an fMRI/motion-testing dataset (not
+  Alzheimer DTI). Used to validate the download pipeline.
+  For real analysis, use OASIS-3 or ADNI DTI data.
+
+  DTI sample data: Stanford HARDI (from dipy library)
+    Shape: (81, 106, 76, 160)
+    B-values: [0, 2000]
+    160 diffusion volumes
+
+============================================================
+  TASK 2: DTI PREPROCESSING
+============================================================
+
+Status: COMPLETE (fast mode)
+
+  Input:  Stanford HARDI (cropped 40×40×40×160)
+  Output: dataset/derivatives/dwi_preprocessed_fast.nii.gz
+
+  Pipeline:
+    1. Denoising     – Patch2Self (model=ridge)    72.9s
+    2. Unringing     – Gibbs Removal               24.3s
+    Total processing time:                         ~97s
+
+  Quality Control:
+  ┌─────────────────────┬───────────┐
+  │ Metric              │ Value     │
+  ├─────────────────────┼───────────┤
+  │ SNR before          │ 8.72      │
+  │ SNR after           │ 8.79      │
+  │ SNR improvement     │ +0.07     │
+  │ Voxels < 0          │ 0         │
+  │ NaN voxels          │ 0         │
+  │ Inf voxels          │ 0         │
+  │ Valid volumes       │ 160 / 160 │
+  │ File size           │ 34.7 MB   │
+  └─────────────────────┴───────────┘
+
+  QC Report: dataset/derivatives/qc_report.png
+
+============================================================
+  TASK 3: TRACTOGRAPHY & CONNECTOME
+============================================================
+
+Status: COMPLETE (10.5s total)
+
+  Input:  dwi_preprocessed_fast.nii.gz + gradient table
+  Output: dataset/derivatives/connectome.npy
+          dataset/derivatives/fa_map.nii.gz
+
+  Pipeline:
+    1. Brain mask (median_otsu)
+       → 7,912 / 64,000 voxels (12.4%)
+    2. DTI model fit
+       → FA range: [0.006, 0.837], mean=0.104
+       → MD range: [0.000474, 0.002442]
+    3. CSD model fit (fiber orientation)            6.3s
+    4. Deterministic tractography
+       → Seeds: 864 (FA > 0.2)
+       → Total streamlines: 864
+       → After filtering (10-500 pts): 393
+    5. Grid parcellation: 4×4×4 = 64 ROIs
+    6. Connectivity matrix: 64×64
+       → Non-zero connections: 44
+       → Max connection weight: 38
+
+  Report: dataset/derivatives/task3_report.png
+
+============================================================
+  TASK 4: GRAPH FEATURE EXTRACTION
+============================================================
+
+Status: COMPLETE (1.3s)
+
+  Input:  connectome.npy (64×64)
+  Output: dataset/derivatives/graph_features.npz
+
+  Graph: 64 nodes, 22 edges, 48 connected components
+  (sparse due to small cropped region – expected)
+
+  ┌──────────────────────────┬───────────────┐
+  │ Feature                  │ Value         │
+  ├──────────────────────────┼───────────────┤
+  │ 1. Degree (mean)         │ 0.69          │
+  │    Degree (max)          │ 5             │
+  │ 2. Clustering coeff      │ 0.2228        │
+  │    Nodes with CC > 0     │ 11 / 64       │
+  │ 3. Path length           │ 0.4459        │
+  │    (largest component)   │ 15 nodes      │
+  │ 4. Global efficiency     │ 0.0255        │
+  │ 5. Small-worldness (σ)   │ very high*    │
+  └──────────────────────────┴───────────────┘
+
+  * Small-worldness inflated because C_rand ≈ 0 for this
+    sparse sample graph. Will normalize with full-brain data.
+
+  Report: dataset/derivatives/task4_report.png
+
+============================================================
+  TASK 5: STATISTICAL ANALYSIS (RQ2)
+============================================================
+
+Status: COMPLETE (1.0s)
+
+  Input:  Simulated cohort (60 subjects: 20 HC, 20 MCI, 20 AD)
+  Output: dataset/derivatives/task5_statistics.csv
+          dataset/derivatives/task5_report.png
+
+  Note: Real OASIS-3/ADNI cognitive scores (MMSE) require
+  account registration. Simulated data used for pipeline
+  validation. Replace with real data when available.
+
+  ─── OLS Regression: MMSE ~ Graph Features + SNR ────────
+
+  ┌──────────────────────┬──────────────────────────┐
+  │ Model metric         │ Value                    │
+  ├──────────────────────┼──────────────────────────┤
+  │ R²                   │ 0.845                    │
+  │ Adj. R²              │ 0.827                    │
+  │ F-statistic          │ 48.10 (p = 1.02e-19)     │
+  │ Significant (p<0.05) │ path_length (p < 0.001)  │
+  │ SNR (QC covariate)   │ p = 0.763 (not signif.)  │
+  └──────────────────────┴──────────────────────────┘
+
+  Interpretation:
+  → Path length is the strongest predictor of MMSE decline
+  → As path length ↑ (brain loses connections), MMSE ↓
+  → SNR does not confound results (p = 0.76)
+  → Model explains 84.5% of cognitive score variance
+
+  ─── ANOVA: HC vs MCI vs AD (all p < 0.001 ***) ────────
+
+  ┌─────────────────┬────────┬────────┬────────┬────────┐
+  │ Feature         │ F-stat │ HC     │ MCI    │ AD     │
+  ├─────────────────┼────────┼────────┼────────┼────────┤
+  │ path_length     │ 345.7  │ 2.45   │ 3.41   │ 5.08 ↑ │
+  │ global_eff      │ 75.2   │ 0.35   │ 0.28   │ 0.18 ↓ │
+  │ degree_mean     │ 48.4   │ 14.8   │ 11.3   │ 7.7  ↓ │
+  │ small_world     │ 30.6   │ 1.92   │ 1.48   │ 0.98 ↓ │
+  │ clustering      │ 17.4   │ 0.40   │ 0.31   │ 0.23 ↓ │
+  └─────────────────┴────────┴────────┴────────┴────────┘
+
+  Key insight: All 5 graph features show statistically
+  significant progressive degradation from HC → MCI → AD.
+  Path length shows the largest effect size (F=345.7).
+
+============================================================
+  OUTPUT FILES
+============================================================
+
+  dataset/derivatives/
+  ├── dwi_preprocessed_fast.nii.gz   (34.7 MB)  Task 2
+  ├── qc_report.png                             Task 2
+  ├── fa_map.nii.gz                             Task 3
+  ├── connectome.npy                 (64×64)    Task 3
+  ├── task3_report.png                          Task 3
+  ├── graph_features.npz                        Task 4
+  ├── task4_report.png                          Task 4
+  ├── task5_statistics.csv           (60 rows)  Task 5
+  └── task5_report.png                          Task 5
+
+============================================================
+  NEXT STEPS (for real Alzheimer analysis)
+============================================================
+
+  1. Obtain DTI data from OASIS-3 or ADNI
+     → Register at oasis-brains.org or adni.loni.usc.edu
+     → Download DWI/DTI .nii.gz + .bval + .bvec files
+
+  2. Run Task 2 with real data (full brain, fast_mode=False):
+     preprocess_dwi(
+         data_path="path/to/sub-XX_dwi.nii.gz",
+         bval_path="path/to/sub-XX_dwi.bval",
+         fast_mode=False
+     )
+
+  3. Use a proper brain atlas for parcellation in Task 3
+     (e.g., AAL, Desikan-Killiany) instead of grid-based ROIs
+
+  4. Replace simulated cohort in Task 5 with real MMSE/ADAS-Cog
+     scores from the clinical dataset
+
+  5. Consider adding:
+     → Eddy current correction (motion correction)
+     → Registration to MNI standard space
+     → Multiple comparison correction (FDR/Bonferroni)
+     → Cross-validation for regression model
+
+============================================================
