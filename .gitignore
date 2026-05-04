@@ -1,6 +1,3 @@
-# ======================
-# MEDIC-AI .gitignore
-# ======================
 
 # Dataset và dữ liệu MRI (dung lượng lớn, không push lên git)
 dataset/*
