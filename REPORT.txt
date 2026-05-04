@@ -1,19 +1,7 @@
 ============================================================
-  MEDIC-AI – Sample Run Report
-  Graph Analysis of DTI Images (Alzheimer)
-  Generated: 2026-05-04
-============================================================
-
-Project: MEDIC-AI
 Topic:   Graph analysis of DTI images
 Goal:    Build end-to-end pipeline from raw DTI → Brain Graph
          → Graph Features → Statistical Regression (MMSE)
-
-Environment:
-  OS:       Windows 10/11
-  Python:   3.11 (venv)
-  Key libs: dipy 1.9.0, networkx 3.3, statsmodels 0.14.2
-
 ============================================================
   TASK 1: SETUP & DATA ACQUISITION
 ============================================================
