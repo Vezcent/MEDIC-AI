@@ -3,7 +3,8 @@
 # ======================
 
 # Dataset và dữ liệu MRI (dung lượng lớn, không push lên git)
-dataset/
+dataset/*
+!dataset/derivatives/
 !dataset/.gitkeep
 
 # Python virtual environment
