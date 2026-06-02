@@ -1,0 +1,80 @@
+TECHNICAL REPORT: ADJUSTMENT OF BRAIN NETWORK ANALYSIS METHODOLOGY
+
+Original Topic: Graph Analysis of DTI Images in Alzheimer's Disease
+
+Revised Topic: Structural Brain Network Analysis of MRI Images in Alzheimer's Disease
+
+1. Academic Rationale for Methodological Adjustment
+Limited Availability of Clinical DTI Data
+Diffusion Tensor Imaging (DTI) data from Alzheimer's disease patients are difficult to access due to strict medical data privacy regulations.
+The Alzheimer's Disease Neuroimaging Initiative (ADNI) dataset requires ethical approval, institutional verification, and a rigorous application process, which typically takes between three and six months.
+OASIS-3, which contains diffusion MRI data, requires a separate research account verification process and extended data access approval.
+During the project period, only the publicly accessible OASIS-1 and OASIS-2 datasets were readily available.
+Characteristics of OASIS-1 and OASIS-2
+OASIS-1 and OASIS-2 primarily provide T1-weighted structural MRI (MPRAGE) scans.
+These datasets do not include diffusion imaging information such as b-values and b-vectors required for DTI/DWI processing.
+Consequently, direct white matter tractography and diffusion-based connectivity analysis cannot be performed using these datasets.
+Alternative Scientific Approach: Structural Covariance Network (SCN)
+To maintain project feasibility while preserving the scientific foundation of graph-theoretical brain network analysis, the study was redirected toward Structural Covariance Network (SCN) analysis using T1-weighted MRI data from OASIS-1 and OASIS-2.
+SCN constructs brain graphs based on the linear covariance of gray matter morphology across brain regions within a population.
+In this study, 64 Regions of Interest (ROIs) were extracted, and inter-regional covariance was used to construct structural brain networks.
+Structural covariance analysis is a widely accepted and extensively used methodology in Alzheimer's disease neuroimaging research.
+2. Project Deliverables
+
+The project consists of two complementary components designed to demonstrate both technical competence and clinical applicability.
+
+A. DTI Methodological Proof of Concept
+
+A complete DTI processing framework was implemented, covering the entire workflow from preprocessing to graph analysis:
+
+Task 2 – Denoising and Gibbs Artifact Removal
+Diffusion MRI denoising using the Patch2Self algorithm (Ridge Regression-based self-supervised denoising).
+Gibbs ringing artifact correction.
+Task 3 – Tractography
+Implementation of Tensor and Constant Solid Angle (CSA) diffusion models.
+Deterministic tractography for white matter fiber reconstruction.
+Construction of structural connectivity matrices based on fiber count and fractional anisotropy (FA).
+Task 4 – Graph Feature Extraction
+
+Extraction of five core graph-theoretical metrics:
+
+Degree
+Clustering Coefficient
+Characteristic Path Length
+Global Efficiency
+Small-Worldness
+Task 5 – Statistical Analysis
+Regression analysis investigating the relationship between network topology and disease severity.
+Experimental Dataset
+Stanford HARDI dataset, automatically downloaded through the processing pipeline.
+Significance
+
+This component demonstrates full technical capability in DTI processing, tractography reconstruction, and graph-based connectome analysis.
+
+B. Clinical Alzheimer's Disease Cohort Analysis
+
+Two structural covariance network pipelines were successfully established and evaluated on real Alzheimer's disease cohorts.
+
+OASIS-1 Pipeline
+
+File: scripts/run_oasis.py
+
+38 subjects analyzed.
+23 subjects with available clinical CDR and MMSE assessments.
+Disc 7 subset.
+OASIS-2 Pipeline
+
+File: scripts/run_oasis2.py
+
+209 longitudinal sessions.
+82 unique subjects.
+Multi-year follow-up cohort.
+Optimization Techniques
+Stride-based MRI downsampling for approximately 10× faster tissue segmentation (CSF, GM, WM).
+Regional feature caching using regional_gm.npy.
+Subsequent network analyses and visualization generation reduced to approximately one second.
+Scientific Findings
+The normalized OASIS-2 Structural Covariance Network achieved a Small-Worldness index of 1.8982, consistent with the small-world topology observed in healthy brain networks.
+Ordinary Least Squares (OLS) regression demonstrated that normalized Whole Brain Volume (nWBV) is strongly associated with:
+Cognitive performance measured by MMSE (p < 0.001)
+Dementia severity measured by CDR (p < 0.001)
