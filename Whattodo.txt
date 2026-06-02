@@ -1,3 +1,7 @@
+DO THIS
+.\.venv\Scripts\activate
+
+
 PHASE 1 — Background + Chuẩn bị (bắt buộc)
 Task 1.1 — Hiểu DWI / DTI
 DWI vs DTI là gì

@@ -4,6 +4,16 @@ dataset/*
 !dataset/derivatives/
 !dataset/.gitkeep
 
+# Keep OASIS folder structures but ignore the actual datasets
+oasis/o1/*
+!oasis/o1/.gitkeep
+oasis/o1_using/*
+!oasis/o1_using/.gitkeep
+oasis/o2/*
+!oasis/o2/.gitkeep
+oasis/o2_using/*
+!oasis/o2_using/.gitkeep
+
 # Python virtual environment
 .venv/
 venv/

@@ -32,7 +32,7 @@ from dipy.tracking.streamline import Streamlines
 from dipy.data import default_sphere
 
 
-# -- Configuration -------------------------------------------------------------
+# Configuration 
 DERIV_DIR   = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                            "dataset", "derivatives")
 PROC_PATH   = os.path.join(DERIV_DIR, "dwi_preprocessed_fast.nii.gz")

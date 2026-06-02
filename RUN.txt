@@ -1,5 +1,5 @@
 ============================================================
-  MEDIC-AI – Graph Analysis of DTI Images (Alzheimer)
+  MEDIC-AI – Graph Analysis of MRI Images (Alzheimer)
 ============================================================
 
 Yêu cầu hệ thống
@@ -8,6 +8,10 @@ Yêu cầu hệ thống
   - Windows 10/11 (đã test)
   - RAM: >= 8 GB
   - Dung lượng ổ cứng: >= 5 GB trống
+
+============================================================
+  CÁCH 1: CHẠY VỚI OASIS-1 (DỮ LIỆU THẬT)  ← KHUYÊN DÙNG
+============================================================
 
 ------------------------------------------------------------
 BƯỚC 0: Kích hoạt môi trường ảo (.venv)
@@ -31,53 +35,123 @@ BƯỚC 1: Cài đặt dependencies (chỉ cần làm 1 lần)
   để tránh lỗi binary incompatibility với dipy.
 
 ------------------------------------------------------------
-BƯỚC 2: Tải dataset mẫu từ OpenNeuro
+BƯỚC 2: Chuẩn bị dataset OASIS-1
 ------------------------------------------------------------
 
-  python scripts/download_dataset.py
+  Đặt dữ liệu OASIS vào thư mục:
+    oasis/o1_using/disc7/
 
-  → Tải dữ liệu sub-01 từ dataset ds002737 về thư mục:
-    dataset/sub-01/
+  Cấu trúc cần có:
+    oasis/o1_using/disc7/
+    ├── OAS1_0232_MR1/
+    │   ├── OAS1_0232_MR1.txt        ← metadata (CDR, MMSE, age)
+    │   ├── RAW/                     ← ảnh gốc (.hdr/.img)
+    │   ├── PROCESSED/MPRAGE/T88_111/ ← ảnh đã xử lý (atlas T88)
+    │   └── FSL_SEG/                 ← phân vùng não (GM/WM/CSF)
+    ├── OAS1_0233_MR1/
+    └── ...
 
-  Lưu ý: Dataset này là fMRI (dùng để test luồng tải dữ liệu).
-  Để phân tích Alzheimer thật, cần đăng ký tài khoản và tải
-  dữ liệu DTI từ OASIS-3 (oasis-brains.org) hoặc ADNI.
-
-------------------------------------------------------------
-BƯỚC 3: Tiền xử lý ảnh DTI – Task 2 (FAST MODE)
-------------------------------------------------------------
-
-  python scripts/task2_preprocess.py
-
-  → Script sẽ tự động:
-      1. Tải dữ liệu DTI mẫu (Stanford HARDI ~400MB) từ dipy
-      2. Crop vùng não trung tâm 40×40×40 (fast mode)
-      3. Khử nhiễu bằng Patch2Self (model=ridge, ~70–90 giây)
-      4. Loại bỏ Gibbs Ringing (~25 giây)
-      5. Đo SNR trước/sau xử lý
-      6. Lưu kết quả tại:
-           dataset/derivatives/dwi_preprocessed_fast.nii.gz
-
-  Để chạy toàn bộ ảnh não (không crop):
-    → Mở scripts/task2_preprocess.py
-    → Đổi dòng cuối: fast_mode=False
-
-  Để dùng dữ liệu DTI Alzheimer thật:
-    → Điền đường dẫn vào hàm preprocess_dwi():
-        preprocess_dwi(
-            data_path=r"E:\...\sub-XX_dwi.nii.gz",
-            bval_path=r"E:\...\sub-XX_dwi.bval",
-            fast_mode=False
-        )
+  Dataset OASIS-1 tải từ: https://www.oasis-brains.org/
 
 ------------------------------------------------------------
-Trạng thái hiện tại (Task Checklist)
+BƯỚC 3: Chạy pipeline OASIS
 ------------------------------------------------------------
 
-  [x] Task 1 – Setup & Tải dữ liệu OpenNeuro (DONE)
-  [x] Task 2 – Tiền xử lý ảnh DTI (DONE – sample)
-  [ ] Task 3 – Tractography & Parcellation (TODO)
-  [ ] Task 4 – Trích xuất đặc trưng đồ thị (TODO)
-  [ ] Task 5 – Phân tích thống kê / Hồi quy (TODO)
+  python scripts/run_oasis.py
+
+  → Script chạy tự động 6 bước trên toàn bộ subjects:
+      1. Parse metadata (CDR, MMSE, nWBV, age, sex) từ .txt
+      2. Load ảnh T1 (Analyze .hdr/.img) + FSL segmentation
+      3. Trích xuất features: GM/WM/CSF volume, regional GM
+      4. Xây dựng Structural Covariance Network (64 ROIs)
+      5. Tính 5 đặc trưng đồ thị:
+           - Degree, Clustering, Path length
+           - Global efficiency, Small-worldness
+      6. Hồi quy OLS: CDR ~ nWBV + vol_gm + vol_wm + age
+
+  Thời gian chạy: ~25 giây (38 subjects)
+
+  Kết quả lưu tại: result/o1/
+    ├── subjects_data.csv    ← metadata + features 38 subjects
+    ├── connectome.npy       ← ma trận kết nối 64×64
+    ├── graph_features.npz   ← 5 chỉ số đồ thị
+    └── oasis_report.png     ← báo cáo trực quan (8 panels)
+
+------------------------------------------------------------
+  Chạy disc khác
+------------------------------------------------------------
+
+  Để chạy disc khác, sửa 2 dòng trong scripts/run_oasis.py:
+
+    DATA_DIR   = r"E:\Medic\MEDIC-AI\oasis\o1_using\disc8"
+    OUTPUT_DIR = r"E:\Medic\MEDIC-AI\result\o1_disc8"
+
+  Hoặc truyền tham số khi gọi hàm:
+
+    from scripts.run_oasis import run_oasis_pipeline
+    run_oasis_pipeline(
+        data_dir=r"E:\...\disc8",
+        output_dir=r"E:\...\result\disc8"
+    )
+
+============================================================
+  CÁCH 2: CHẠY VỚI SAMPLE DATA (DTI DEMO)
+============================================================
+
+  Dùng để test pipeline khi chưa có data OASIS.
+  Data sẽ tự tải từ thư viện dipy (Stanford HARDI ~400MB).
+
+------------------------------------------------------------
+  Chạy từng bước
+------------------------------------------------------------
+
+  1. Tiền xử lý DTI:
+     python scripts/task2_preprocess.py
+
+  2. Kiểm tra trực quan kết quả:
+     python scripts/visualize_dwi.py
+
+  3. Tractography & Connectome:
+     python scripts/task3_tractography.py
+
+  4. Trích xuất đặc trưng đồ thị:
+     python scripts/task4_graph_features.py
+
+  5. Phân tích thống kê (dữ liệu mô phỏng):
+     python scripts/task5_statistics.py
+
+  Kết quả lưu tại: dataset/derivatives/
+
+============================================================
+  Trạng thái hiện tại (Task Checklist)
+============================================================
+
+  [x] Task 1 – Setup & Tải dữ liệu
+  [x] Task 2 – Tiền xử lý ảnh DTI (sample + OASIS)
+  [x] Task 3 – Tractography & Parcellation
+  [x] Task 4 – Trích xuất đặc trưng đồ thị
+  [x] Task 5 – Phân tích thống kê / Hồi quy
+  [x] OASIS-1 Pipeline – Chạy trên dữ liệu thật (disc7)
+
+============================================================
+  CẤU TRÚC THƯ MỤC DỰ ÁN
+============================================================
+
+  MEDIC-AI/
+  ├── scripts/
+  │   ├── run_oasis.py            ← Pipeline OASIS-1 (CHÍNH)
+  │   ├── task2_preprocess.py     ← Tiền xử lý DTI (sample)
+  │   ├── task3_tractography.py   ← Tractography (sample)
+  │   ├── task4_graph_features.py ← Graph features (sample)
+  │   ├── task5_statistics.py     ← Thống kê (sample)
+  │   ├── visualize_dwi.py       ← QC Report DTI
+  │   └── download_dataset.py    ← Tải data OpenNeuro
+  ├── oasis/o1_using/disc7/       ← Dữ liệu OASIS-1
+  ├── result/o1/                  ← Kết quả chạy OASIS
+  ├── dataset/derivatives/        ← Kết quả chạy sample
+  ├── requirements.txt
+  ├── README.md
+  ├── REPORT.txt
+  └── RUN.txt                    ← File này
 
 ============================================================
